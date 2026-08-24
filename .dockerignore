@@ -1,0 +1,12 @@
+.git
+.github
+.idea
+docker/server
+var/
+vendor/
+tests/
+.env.local
+.env.*.local
+config/jwt/*.pem
+compose*.yaml
+*.md

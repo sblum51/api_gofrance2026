@@ -1,0 +1,19 @@
+vich_uploader:
+    db_driver: orm
+    storage: flysystem
+    twig: false
+    mappings:
+        organization_logo:
+            uri_prefix: '/media/logos'
+            upload_destination: 'organization_logo.storage'
+            namer: { service: 'Vich\UploaderBundle\Naming\SmartUniqueNamer' }
+
+        organization_cover:
+            uri_prefix: '/media/covers'
+            upload_destination: 'organization_cover.storage'
+            namer: { service: 'Vich\UploaderBundle\Naming\SmartUniqueNamer' }
+
+        parcours_photo:
+            uri_prefix: '/media/parcours'
+            upload_destination: 'parcours_photo.storage'
+            namer: { service: 'Vich\UploaderBundle\Naming\SmartUniqueNamer' }

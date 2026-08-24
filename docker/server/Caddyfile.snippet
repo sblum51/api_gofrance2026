@@ -1,0 +1,12 @@
+# Bloc à ajouter au Caddyfile partagé du serveur agoraone
+# (~/docker/Caddyfile, à côté des blocs orun et caporientation).
+#
+# Le domaine vient de la variable GOFRANCE_API_DOMAIN, à déclarer dans
+# ~/docker/.env :
+#   GOFRANCE_API_DOMAIN=api.go-france.net
+
+{$GOFRANCE_API_DOMAIN} {
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+	reverse_proxy gofrance-api:80
+}

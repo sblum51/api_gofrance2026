@@ -1,0 +1,64 @@
+# Docker Compose — serveur partagé agoraone (deployer@api.notifs.cloud)
+# Se copie sur le serveur en ~/gofrance-api/compose.yaml par `castor setup`.
+#
+# Pré-requis sur le serveur :
+#   - réseaux externes "web" et "backend" déjà créés ;
+#   - stack infra (caddy + postgres) déjà démarrée dans ~/docker/ ;
+#   - image "gofrance-api:latest" construite par `castor build` ;
+#   - ~/gofrance-api/.env rempli (voir docker/server/.env.dist) ;
+#   - domaine ajouté au Caddyfile partagé (voir docker/server/Caddyfile.snippet).
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+
+  gofrance-api:
+    image: gofrance-api:latest
+    # Nom de conteneur figé : le Caddy partagé fait `reverse_proxy
+    # gofrance-api:80`, et la résolution DNS entre projets sur un réseau
+    # externe ne connaît que les noms de conteneurs, pas les noms de services.
+    container_name: gofrance-api
+    volumes:
+      # Clés JWT (lecture seule).
+      - ./jwt:/app/config/jwt:ro
+      # ⚠ LE volume critique. var/storage contient TOUT le contenu client :
+      # logos, couvertures, photos de parcours, médias des points, et surtout
+      # les JSON générés par organisation — c'est ce que l'APP télécharge pour
+      # fonctionner. Sans ce montage, chaque déploiement repart d'une image
+      # neuve et efface l'intégralité des contenus.
+      - ./storage:/app/var/storage
+      - ./logs:/app/var/log
+      # FrankenPHP/Caddy a besoin de /data et /config en écriture.
+      - caddy_data:/data
+      - caddy_config:/config
+    env_file:
+      - ./.env
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      # Écoute en HTTP simple sur le port 80 : le Caddy de l'hôte termine le
+      # TLS pour api.go-france.net et fait suivre sur le réseau "web".
+      # Laisser vide ou "localhost" ferait tenter un certificat ACME au
+      # conteneur, qui planterait sur /data/caddy/pki.
+      SERVER_NAME: ":80"
+      FRANKENPHP_NUM_WORKERS: "${FRANKENPHP_NUM_WORKERS:-4}"
+      FRANKENPHP_NUM_THREADS: "${FRANKENPHP_NUM_THREADS:-8}"
+    restart: always
+    logging: *default-logging
+    networks:
+      - web        # joignable par le Caddy partagé
+      - backend    # accès au Postgres partagé
+
+networks:
+  web:
+    external: true
+  backend:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

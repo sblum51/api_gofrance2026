@@ -1,0 +1,56 @@
+# Stockage local par défaut (dev) : les fichiers sont hors du webroot
+# (var/storage/…) et servis par MediaController via une vraie route Symfony,
+# pour que NelmioCorsBundle s'applique. C'est nécessaire quel que soit le
+# serveur utilisé (`php -S`, `symfony server:start`, …) : tous servent les
+# fichiers réels placés sous public/ directement, en court-circuitant le
+# kernel Symfony (et donc les en-têtes CORS).
+#
+# Pour passer en production sur S3, remplacer chaque bloc
+# "adapter: local / options: {directory: ...}" par :
+#
+#   adapter: aws
+#   options:
+#       client: 'Aws\S3\S3Client'
+#       bucket: '%env(AWS_S3_BUCKET)%'
+#       prefix: 'media/logos' # (ou 'media/covers', 'media/parcours', 'data')
+#
+# et déclarer le client S3 dans config/services.yaml (voir exemple en bas de ce
+# fichier). Les URL générées (getLogoUrl(), etc. sur les entités) devront alors
+# pointer directement vers le bucket/CDN plutôt que vers MediaController.
+flysystem:
+    storages:
+        organization_logo.storage:
+            adapter: 'local'
+            options:
+                directory: '%kernel.project_dir%/var/storage/media/logos'
+
+        organization_cover.storage:
+            adapter: 'local'
+            options:
+                directory: '%kernel.project_dir%/var/storage/media/covers'
+
+        parcours_photo.storage:
+            adapter: 'local'
+            options:
+                directory: '%kernel.project_dir%/var/storage/media/parcours'
+
+        parcours_point_media.storage:
+            adapter: 'local'
+            options:
+                directory: '%kernel.project_dir%/var/storage/media/parcours-points'
+
+        organization_data.storage:
+            adapter: 'local'
+            options:
+                directory: '%kernel.project_dir%/var/storage/data'
+
+# Exemple de client S3 partagé (à ajouter dans config/services.yaml une fois
+# AWS_S3_BUCKET / AWS_S3_REGION / AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY renseignés) :
+#
+# Aws\S3\S3Client:
+#     arguments:
+#         -   version: 'latest'
+#             region: '%env(AWS_S3_REGION)%'
+#             credentials:
+#                 key: '%env(AWS_ACCESS_KEY_ID)%'
+#                 secret: '%env(AWS_SECRET_ACCESS_KEY)%'
