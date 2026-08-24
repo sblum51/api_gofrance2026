@@ -1,56 +1,85 @@
-# Stockage local par défaut (dev) : les fichiers sont hors du webroot
-# (var/storage/…) et servis par MediaController via une vraie route Symfony,
-# pour que NelmioCorsBundle s'applique. C'est nécessaire quel que soit le
-# serveur utilisé (`php -S`, `symfony server:start`, …) : tous servent les
-# fichiers réels placés sous public/ directement, en court-circuitant le
-# kernel Symfony (et donc les en-têtes CORS).
+# Stockage des médias et des JSON générés par organisation.
 #
-# Pour passer en production sur S3, remplacer chaque bloc
-# "adapter: local / options: {directory: ...}" par :
+# En développement : adaptateur local, fichiers hors du webroot (var/storage/…)
+# servis par MediaController via une vraie route Symfony, pour que
+# NelmioCorsBundle s'applique — tous les serveurs de dev servent directement
+# les fichiers réels placés sous public/, en court-circuitant le kernel.
 #
-#   adapter: aws
-#   options:
-#       client: 'Aws\S3\S3Client'
-#       bucket: '%env(AWS_S3_BUCKET)%'
-#       prefix: 'media/logos' # (ou 'media/covers', 'media/parcours', 'data')
+# En production : bucket S3 privé `cdn-gofrance`, diffusé par CloudFront sur
+# cdn.go-france.net. Les préfixes reproduisent exactement les chemins renvoyés
+# par les entités (getLogoUrl() → « /media/logos/… ») : une clé S3
+# « media/logos/x.png » devient donc https://cdn.go-france.net/media/logos/x.png
+# sans aucune réécriture d'URL. C'est ce qui permet aux deux frontaux de ne
+# changer qu'une variable d'environnement.
 #
-# et déclarer le client S3 dans config/services.yaml (voir exemple en bas de ce
-# fichier). Les URL générées (getLogoUrl(), etc. sur les entités) devront alors
-# pointer directement vers le bucket/CDN plutôt que vers MediaController.
-flysystem:
-    storages:
-        organization_logo.storage:
-            adapter: 'local'
-            options:
-                directory: '%kernel.project_dir%/var/storage/media/logos'
+# Les blocs sont dupliqués par environnement plutôt que surchargés : la
+# configuration Symfony fusionne les tableaux, et un `directory:` résiduel
+# ferait échouer l'adaptateur S3, qui ne connaît pas cette option.
 
-        organization_cover.storage:
-            adapter: 'local'
-            options:
-                directory: '%kernel.project_dir%/var/storage/media/covers'
+when@dev: &local_storages
+    flysystem:
+        storages:
+            organization_logo.storage:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.project_dir%/var/storage/media/logos'
 
-        parcours_photo.storage:
-            adapter: 'local'
-            options:
-                directory: '%kernel.project_dir%/var/storage/media/parcours'
+            organization_cover.storage:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.project_dir%/var/storage/media/covers'
 
-        parcours_point_media.storage:
-            adapter: 'local'
-            options:
-                directory: '%kernel.project_dir%/var/storage/media/parcours-points'
+            parcours_photo.storage:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.project_dir%/var/storage/media/parcours'
 
-        organization_data.storage:
-            adapter: 'local'
-            options:
-                directory: '%kernel.project_dir%/var/storage/data'
+            parcours_point_media.storage:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.project_dir%/var/storage/media/parcours-points'
 
-# Exemple de client S3 partagé (à ajouter dans config/services.yaml une fois
-# AWS_S3_BUCKET / AWS_S3_REGION / AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY renseignés) :
-#
-# Aws\S3\S3Client:
-#     arguments:
-#         -   version: 'latest'
-#             region: '%env(AWS_S3_REGION)%'
-#             credentials:
-#                 key: '%env(AWS_ACCESS_KEY_ID)%'
-#                 secret: '%env(AWS_SECRET_ACCESS_KEY)%'
+            organization_data.storage:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.project_dir%/var/storage/data'
+
+when@test: *local_storages
+
+when@prod:
+    flysystem:
+        storages:
+            organization_logo.storage: &s3
+                adapter: 'aws'
+                options:
+                    client: 'Aws\S3\S3Client'
+                    bucket: '%env(AWS_S3_BUCKET)%'
+                    prefix: 'media/logos'
+
+            organization_cover.storage:
+                <<: *s3
+                options:
+                    client: 'Aws\S3\S3Client'
+                    bucket: '%env(AWS_S3_BUCKET)%'
+                    prefix: 'media/covers'
+
+            parcours_photo.storage:
+                <<: *s3
+                options:
+                    client: 'Aws\S3\S3Client'
+                    bucket: '%env(AWS_S3_BUCKET)%'
+                    prefix: 'media/parcours'
+
+            parcours_point_media.storage:
+                <<: *s3
+                options:
+                    client: 'Aws\S3\S3Client'
+                    bucket: '%env(AWS_S3_BUCKET)%'
+                    prefix: 'media/parcours-points'
+
+            organization_data.storage:
+                <<: *s3
+                options:
+                    client: 'Aws\S3\S3Client'
+                    bucket: '%env(AWS_S3_BUCKET)%'
+                    prefix: 'data'

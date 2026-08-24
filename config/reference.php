@@ -2054,7 +2054,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     symfonycasts_reset_password?: SymfonycastsResetPasswordConfig,
  *     symfonycasts_verify_email?: SymfonycastsVerifyEmailConfig,
  *     vich_uploader?: VichUploaderConfig,
- *     twig?: TwigConfig,
  *     monolog?: MonologConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
@@ -2094,7 +2093,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         symfonycasts_reset_password?: SymfonycastsResetPasswordConfig,
  *         symfonycasts_verify_email?: SymfonycastsVerifyEmailConfig,
  *         vich_uploader?: VichUploaderConfig,
- *         twig?: TwigConfig,
  *         monolog?: MonologConfig,
  *     },
  *     "when@test"?: array{
