@@ -14,7 +14,12 @@ return [
     SymfonyCasts\Bundle\ResetPassword\SymfonyCastsResetPasswordBundle::class => ['all' => true],
     SymfonyCasts\Bundle\VerifyEmail\SymfonyCastsVerifyEmailBundle::class => ['all' => true],
     Vich\UploaderBundle\VichUploaderBundle::class => ['all' => true],
-    Symfony\Bundle\TwigBundle\TwigBundle::class => ['all' => true],
+    // dev/test uniquement : l'application ne rend aucun gabarit — les courriels
+    // sont construits en texte brut (voir Auth/*Controller) et vich_uploader a
+    // `twig: false`. Le paquet n'arrive d'ailleurs que via web-profiler-bundle,
+    // qui est une dépendance de dev : l'enregistrer pour 'all' faisait planter
+    // le build de l'image de production (composer install --no-dev).
+    Symfony\Bundle\TwigBundle\TwigBundle::class => ['dev' => true, 'test' => true],
     Symfony\Bundle\WebProfilerBundle\WebProfilerBundle::class => ['dev' => true, 'test' => true],
     Symfony\Bundle\MonologBundle\MonologBundle::class => ['all' => true],
     Symfony\Bundle\DebugBundle\DebugBundle::class => ['dev' => true],

@@ -1,6 +1,11 @@
-twig:
-    file_name_pattern: '*.twig'
+# Twig n'est chargé qu'en dev et en test (profileur, MakerBundle). En prod le
+# bundle n'est pas enregistré, donc cette configuration ne doit pas s'y appliquer :
+# Symfony refuse une configuration dont l'extension n'est pas chargée.
+when@dev:
+    twig:
+        file_name_pattern: '*.twig'
 
 when@test:
     twig:
+        file_name_pattern: '*.twig'
         strict_variables: true
