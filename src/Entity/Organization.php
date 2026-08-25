@@ -67,7 +67,10 @@ class Organization
 
     #[ORM\Column(length: 63)]
     #[Assert\NotBlank]
-    #[Assert\Length(min: 5, max: 63)]
+    // 4 caractères minimum : « demo » est l'adresse annoncée sur le site
+    // vitrine et encodée dans son QR code. Les identifiants sensibles (www,
+    // manager, api, admin) restent bloqués par la contrainte Choice ci-dessous.
+    #[Assert\Length(min: 4, max: 63)]
     #[Assert\Regex(pattern: '/^[a-z0-9]+(-[a-z0-9]+)*$/', message: 'Uniquement des lettres minuscules, des chiffres et des tirets.')]
     #[Assert\Choice(choices: self::RESERVED_IDENTIFIERS, match: false, message: 'Cet identifiant est réservé.')]
     #[Groups(['organization:read', 'organization:write', 'organization:admin:read'])]
