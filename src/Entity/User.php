@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use App\Repository\UserRepository;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -34,14 +36,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private bool $isVerified = false;
 
-    #[ORM\OneToOne(mappedBy: 'owner', targetEntity: Organization::class, cascade: ['persist', 'remove'])]
-    private ?Organization $organization = null;
+    /**
+     * Organisations auxquelles l'utilisateur appartient. Remplace l'ancien
+     * OneToOne : un même compte peut gérer plusieurs territoires, et une
+     * organisation peut avoir plusieurs gestionnaires.
+     *
+     * @var Collection<int, Membership>
+     */
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Membership::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $memberships;
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
     public function __construct()
     {
+        $this->memberships = new ArrayCollection();
         $this->id = Uuid::v7()->toRfc4122();
         $this->createdAt = new \DateTimeImmutable();
     }
@@ -113,16 +123,45 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getOrganization(): ?Organization
+    /** @return Collection<int, Membership> */
+    public function getMemberships(): Collection
     {
-        return $this->organization;
+        return $this->memberships;
     }
 
-    public function setOrganization(?Organization $organization): static
+    /**
+     * Organisation « par défaut » : la première à laquelle l'utilisateur
+     * appartient. Conservée pour les usages qui n'ont pas à choisir (courriels
+     * transactionnels, affichage d'un contexte). MANAGER, lui, laisse
+     * l'utilisateur sélectionner.
+     */
+    public function getOrganization(): ?Organization
     {
-        $this->organization = $organization;
+        $premiere = $this->memberships->first();
 
-        return $this;
+        return false === $premiere ? null : $premiere->getOrganization();
+    }
+
+    public function belongsTo(Organization $organization): bool
+    {
+        foreach ($this->memberships as $membership) {
+            if ($membership->getOrganization()->getId() === $organization->getId()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function isOwnerOf(Organization $organization): bool
+    {
+        foreach ($this->memberships as $membership) {
+            if ($membership->getOrganization()->getId() === $organization->getId()) {
+                return $membership->isOwner();
+            }
+        }
+
+        return false;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

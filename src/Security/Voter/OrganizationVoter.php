@@ -25,6 +25,14 @@ final class OrganizationVoter extends Voter
     {
         $user = $token->getUser();
 
-        return $user instanceof User && $subject instanceof Organization && $subject->getOwner()->getId() === $user->getId();
+        if (!$user instanceof User || !$subject instanceof Organization) {
+            return false;
+        }
+
+        // Consulter suffit d'être membre ; modifier l'organisation elle-même
+        // (identité, abonnement, accès) est réservé aux propriétaires.
+        return self::VIEW === $attribute
+            ? $user->belongsTo($subject)
+            : $user->isOwnerOf($subject);
     }
 }

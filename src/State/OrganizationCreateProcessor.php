@@ -4,11 +4,11 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\Entity\Membership;
 use App\Entity\Organization;
 use App\Entity\User;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class OrganizationCreateProcessor implements ProcessorInterface
 {
@@ -30,11 +30,15 @@ final class OrganizationCreateProcessor implements ProcessorInterface
             throw new \LogicException('Un utilisateur authentifié est requis.');
         }
 
-        if (null !== $user->getOrganization()) {
-            throw new ConflictHttpException('Ce compte possède déjà une organisation.');
-        }
+        // Un même compte peut désormais gérer plusieurs territoires : plus de
+        // refus si une organisation existe déjà. Seul l'identifiant reste
+        // unique, la contrainte d'entité s'en charge.
+        $membership = (new Membership())
+            ->setUser($user)
+            ->setOrganization($data)
+            ->setRole(Membership::ROLE_OWNER);
 
-        $data->setOwner($user);
+        $data->getMemberships()->add($membership);
 
         return $this->persistProcessor->process($data, $operation, $uriVariables, $context);
     }

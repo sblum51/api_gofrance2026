@@ -25,6 +25,10 @@ final class ParcoursVoter extends Voter
     {
         $user = $token->getUser();
 
-        return $user instanceof User && $subject instanceof Parcours && $subject->getOrganization()->getOwner()->getId() === $user->getId();
+        // Les parcours sont le travail courant : tout membre peut les gérer,
+        // qu'il soit propriétaire ou simple éditeur.
+        return $user instanceof User
+            && $subject instanceof Parcours
+            && $user->belongsTo($subject->getOrganization());
     }
 }

@@ -25,7 +25,7 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
 #[Vich\Uploadable]
 #[ApiResource(
     operations: [
-        new Get(uriTemplate: '/organizations/mine', name: 'mine', provider: OrganizationMineProvider::class),
+        new GetCollection(uriTemplate: '/organizations/mine', name: 'mine', provider: OrganizationMineProvider::class),
         new Get(requirements: ['id' => '[0-9a-fA-F-]{36}'], security: "is_granted('ORGANIZATION_VIEW', object)"),
         new Patch(requirements: ['id' => '[0-9a-fA-F-]{36}'], security: "is_granted('ORGANIZATION_EDIT', object)"),
         new Post(processor: OrganizationCreateProcessor::class),
@@ -106,9 +106,15 @@ class Organization
     #[Groups(['organization:read', 'organization:write'])]
     private ?float $mainCommuneLng = null;
 
-    #[ORM\OneToOne(inversedBy: 'organization', targetEntity: User::class)]
-    #[ORM\JoinColumn(nullable: false, unique: true)]
-    private User $owner;
+    /**
+     * Gestionnaires de l'organisation. Remplace le propriétaire unique : un
+     * office de tourisme à deux salariés n'a plus à partager un mot de passe,
+     * et le départ d'une personne ne fait plus disparaître l'accès.
+     *
+     * @var Collection<int, Membership>
+     */
+    #[ORM\OneToMany(mappedBy: 'organization', targetEntity: Membership::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $memberships;
 
     #[ORM\OneToMany(mappedBy: 'organization', targetEntity: Parcours::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[Groups(['organization:admin:read'])]
@@ -136,6 +142,7 @@ class Organization
     {
         $this->id = Uuid::v7()->toRfc4122();
         $this->parcours = new ArrayCollection();
+        $this->memberships = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
     }
@@ -305,16 +312,24 @@ class Organization
         return $this;
     }
 
-    public function getOwner(): User
+    /** @return Collection<int, Membership> */
+    public function getMemberships(): Collection
     {
-        return $this->owner;
+        return $this->memberships;
     }
 
-    public function setOwner(User $owner): static
+    /**
+     * Propriétaires de l'organisation. Il en faut au moins un : c'est la
+     * garantie que quelqu'un peut toujours gérer les accès.
+     *
+     * @return list<Membership>
+     */
+    public function getOwners(): array
     {
-        $this->owner = $owner;
-
-        return $this;
+        return array_values(array_filter(
+            $this->memberships->toArray(),
+            static fn (Membership $m): bool => $m->isOwner(),
+        ));
     }
 
     /** @return Collection<int, Parcours> */
