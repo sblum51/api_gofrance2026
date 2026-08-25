@@ -318,19 +318,6 @@ class Organization
         return $this->memberships;
     }
 
-    /**
-     * Propriétaires de l'organisation. Il en faut au moins un : c'est la
-     * garantie que quelqu'un peut toujours gérer les accès.
-     *
-     * @return list<Membership>
-     */
-    public function getOwners(): array
-    {
-        return array_values(array_filter(
-            $this->memberships->toArray(),
-            static fn (Membership $m): bool => $m->isOwner(),
-        ));
-    }
 
     /** @return Collection<int, Parcours> */
     public function getParcours(): Collection

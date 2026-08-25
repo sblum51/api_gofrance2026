@@ -153,16 +153,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return false;
     }
 
-    public function isOwnerOf(Organization $organization): bool
-    {
-        foreach ($this->memberships as $membership) {
-            if ($membership->getOrganization()->getId() === $organization->getId()) {
-                return $membership->isOwner();
-            }
-        }
-
-        return false;
-    }
 
     public function getCreatedAt(): \DateTimeImmutable
     {

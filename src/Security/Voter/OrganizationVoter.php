@@ -29,10 +29,9 @@ final class OrganizationVoter extends Voter
             return false;
         }
 
-        // Consulter suffit d'être membre ; modifier l'organisation elle-même
-        // (identité, abonnement, accès) est réservé aux propriétaires.
-        return self::VIEW === $attribute
-            ? $user->belongsTo($subject)
-            : $user->isOwnerOf($subject);
+        // Consulter comme modifier : être membre suffit. Il n'y a pas de rôle
+        // au-dessus — tout gestionnaire d'une organisation peut la modifier et
+        // gérer ses accès.
+        return $user->belongsTo($subject);
     }
 }

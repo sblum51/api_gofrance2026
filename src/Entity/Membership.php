@@ -7,10 +7,14 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Uid\Uuid;
-use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Appartenance d'un utilisateur à une organisation.
+ *
+ * Pas de rôle : tout membre peut tout faire — parcours, identité de
+ * l'organisation, gestion des accès. Une distinction éditeur/propriétaire
+ * aurait ajouté une notion à expliquer sans répondre à un besoin réel dans une
+ * structure de quelques personnes.
  *
  * Remplace le OneToOne User↔Organization, qui interdisait à la fois les
  * co-gestionnaires et les organisations multiples. Or la formule « Territoire »
@@ -22,12 +26,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\UniqueConstraint(name: 'uniq_membership_user_organization', fields: ['user', 'organization'])]
 class Membership
 {
-    /** Peut gérer les membres et supprimer l'organisation. */
-    public const string ROLE_OWNER = 'owner';
-    /** Peut créer et modifier les parcours, rien de plus. */
-    public const string ROLE_EDITOR = 'editor';
-    public const array ROLES = [self::ROLE_OWNER, self::ROLE_EDITOR];
-
     #[ORM\Id]
     #[ORM\Column(type: Types::GUID)]
     #[Groups(['membership:read'])]
@@ -40,11 +38,6 @@ class Membership
     #[ORM\ManyToOne(inversedBy: 'memberships')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Organization $organization;
-
-    #[ORM\Column(length: 20)]
-    #[Assert\Choice(choices: self::ROLES)]
-    #[Groups(['membership:read'])]
-    private string $role = self::ROLE_EDITOR;
 
     #[ORM\Column]
     #[Groups(['membership:read'])]
@@ -83,23 +76,6 @@ class Membership
         $this->organization = $organization;
 
         return $this;
-    }
-
-    public function getRole(): string
-    {
-        return $this->role;
-    }
-
-    public function setRole(string $role): static
-    {
-        $this->role = $role;
-
-        return $this;
-    }
-
-    public function isOwner(): bool
-    {
-        return self::ROLE_OWNER === $this->role;
     }
 
     /** Adresse du membre, pour l'écran de gestion des accès. */

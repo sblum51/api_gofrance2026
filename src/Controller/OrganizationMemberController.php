@@ -18,11 +18,8 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Gestion des accès à une organisation.
- *
- * Réservé aux propriétaires (ORGANIZATION_EDIT ne passe que pour eux) : un
- * éditeur peut travailler sur les parcours, pas ouvrir la porte à quelqu'un
- * d'autre.
+ * Gestion des accès à une organisation. Tout membre peut le faire : il n'y a
+ * pas de hiérarchie entre gestionnaires.
  */
 final class OrganizationMemberController
 {
@@ -47,10 +44,6 @@ final class OrganizationMemberController
     {
         $data = json_decode($request->getContent() ?: '{}', true);
         $email = is_string($data['email'] ?? null) ? strtolower(trim($data['email'])) : '';
-        $role = ($data['role'] ?? Membership::ROLE_EDITOR) === Membership::ROLE_OWNER
-            ? Membership::ROLE_OWNER
-            : Membership::ROLE_EDITOR;
-
         if ('' === $email) {
             throw new BadRequestHttpException("Indiquez l'adresse du gestionnaire à ajouter.");
         }
@@ -70,7 +63,7 @@ final class OrganizationMemberController
         }
 
         $this->entityManager->persist(
-            (new Membership())->setUser($user)->setOrganization($organization)->setRole($role),
+            (new Membership())->setUser($user)->setOrganization($organization),
         );
         $this->entityManager->flush();
 
@@ -87,17 +80,17 @@ final class OrganizationMemberController
         }
 
         // Deux garde-fous : on ne se retire pas soi-même par mégarde, et on ne
-        // laisse jamais une organisation sans propriétaire — plus personne ne
-        // pourrait alors gérer les accès.
+        // laisse jamais une organisation sans aucun gestionnaire — plus
+        // personne ne pourrait alors y accéder.
         $courant = $this->security->getUser();
         if ($courant instanceof UserInterface
             && $membership->getUser()->getUserIdentifier() === $courant->getUserIdentifier()) {
             throw new BadRequestHttpException('Vous ne pouvez pas retirer votre propre accès.');
         }
 
-        if ($membership->isOwner() && count($organization->getOwners()) <= 1) {
+        if ($organization->getMemberships()->count() <= 1) {
             throw new BadRequestHttpException(
-                "C'est le dernier propriétaire : nommez d'abord quelqu'un d'autre propriétaire.",
+                "C'est le dernier gestionnaire : l'organisation deviendrait ingérable.",
             );
         }
 
@@ -114,11 +107,10 @@ final class OrganizationMemberController
             static fn (Membership $m): array => [
                 'id' => $m->getId(),
                 'email' => $m->getEmail(),
-                'role' => $m->getRole(),
             ],
             $organization->getMemberships()->toArray(),
         );
-        usort($membres, static fn (array $a, array $b): int => [$b['role'], $a['email']] <=> [$a['role'], $b['email']]);
+        usort($membres, static fn (array $a, array $b): int => $a['email'] <=> $b['email']);
 
         return array_values($membres);
     }

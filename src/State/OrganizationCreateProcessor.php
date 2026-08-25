@@ -35,8 +35,7 @@ final class OrganizationCreateProcessor implements ProcessorInterface
         // unique, la contrainte d'entité s'en charge.
         $membership = (new Membership())
             ->setUser($user)
-            ->setOrganization($data)
-            ->setRole(Membership::ROLE_OWNER);
+            ->setOrganization($data);
 
         $data->getMemberships()->add($membership);
 
