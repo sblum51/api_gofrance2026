@@ -150,6 +150,18 @@ class Parcours
     #[Groups(['parcours:read', 'parcours:admin:read', 'parcours:admin'])]
     private bool $licensed = false;
 
+    /**
+     * Versions audio de la description, par langue : { "fr": "/audio/..." }.
+     * Générées à la demande depuis MANAGER, jamais à l'enregistrement : Polly
+     * est facturé au caractère, une regénération à chaque correction de faute
+     * coûterait sans rien apporter.
+     *
+     * @var array<string, string>
+     */
+    #[ORM\Column(type: Types::JSON)]
+    #[Groups(['parcours:read'])]
+    private array $descriptionAudio = [];
+
     #[ORM\ManyToMany(targetEntity: Tag::class, inversedBy: 'parcours')]
     #[ORM\JoinTable(name: 'parcours_tag')]
     private Collection $tags;
@@ -516,6 +528,10 @@ class Parcours
             'imageUrl' => $point->getImageUrl(),
             'media' => $point->getMedia(),
             'links' => $point->getLinks(),
+            // Versions audio par langue. Absentes tant qu'aucune génération n'a
+            // été demandée : l'application publique se rabat alors sur la
+            // synthèse du navigateur.
+            'audio' => $point->getAudio(),
         ];
     }
 
@@ -559,5 +575,19 @@ class Parcours
     {
         return !$this->organization->isUnlimitedPlan() && !$this->licensed;
     }
+    /** @return array<string, string> */
+    public function getDescriptionAudio(): array
+    {
+        return $this->descriptionAudio;
+    }
+
+    /** @param array<string, string> $descriptionAudio */
+    public function setDescriptionAudio(array $descriptionAudio): static
+    {
+        $this->descriptionAudio = $descriptionAudio;
+
+        return $this;
+    }
 }
+
 

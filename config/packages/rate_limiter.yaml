@@ -1,0 +1,9 @@
+framework:
+    rate_limiter:
+        # Traduction et synthèse : coûteuses chez AWS, et jamais nécessaires en
+        # rafale. Une organisation qui traduit ses parcours en fait quelques
+        # appels par heure, pas quelques dizaines par minute.
+        content_generation:
+            policy: 'sliding_window'
+            limit: 20
+            interval: '1 hour'

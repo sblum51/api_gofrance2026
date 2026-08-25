@@ -23,6 +23,29 @@ services:
             string $mailerFromAddress: '%env(MAILER_FROM_ADDRESS)%'
             string $datatourismeApiKey: '%env(DATATOURISME_API_KEY)%'
 
+    # Traduction et synthèse vocale. Déclarés dans tous les environnements — à
+    # la différence du stockage, ils n'ont pas d'équivalent local, et tester la
+    # traduction suppose de viser AWS avec de vrais identifiants.
+    Aws\Translate\TranslateClient:
+        arguments:
+            -   version: 'latest'
+                region: '%env(AWS_S3_REGION)%'
+                credentials:
+                    key: '%env(AWS_ACCESS_KEY_ID)%'
+                    secret: '%env(AWS_SECRET_ACCESS_KEY)%'
+
+    Aws\Polly\PollyClient:
+        arguments:
+            -   version: 'latest'
+                region: '%env(AWS_S3_REGION)%'
+                credentials:
+                    key: '%env(AWS_ACCESS_KEY_ID)%'
+                    secret: '%env(AWS_SECRET_ACCESS_KEY)%'
+
+    App\Service\SpeechSynthesizer:
+        arguments:
+            $storage: '@parcours_audio.storage'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 

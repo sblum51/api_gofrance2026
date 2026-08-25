@@ -71,6 +71,16 @@ class ParcoursPoint
     #[Groups(['parcours:read'])]
     private ?string $datatourismeId = null;
 
+    /**
+     * Versions audio du texte du point, par langue. Même logique que sur le
+     * parcours : générées explicitement, jamais en silence.
+     *
+     * @var array<string, string>
+     */
+    #[ORM\Column(type: Types::JSON)]
+    #[Groups(['parcours:read'])]
+    private array $audio = [];
+
     #[ORM\Column(nullable: true)]
     #[Groups(['parcours:read'])]
     private ?string $imageUrl = null;
@@ -244,4 +254,18 @@ class ParcoursPoint
     {
         return $this->createdAt;
     }
+    /** @return array<string, string> */
+    public function getAudio(): array
+    {
+        return $this->audio;
+    }
+
+    /** @param array<string, string> $audio */
+    public function setAudio(array $audio): static
+    {
+        $this->audio = $audio;
+
+        return $this;
+    }
 }
+

@@ -50,6 +50,15 @@ final class MediaController
         return $this->serve($storage, $filename);
     }
 
+    #[Route('/audio/{prefix}/{filename}', name: 'media_parcours_audio', methods: ['GET'], requirements: ['prefix' => '[a-z0-9-]+', 'filename' => '[a-z0-9.-]+\.mp3'])]
+    public function parcoursAudio(
+        string $prefix,
+        string $filename,
+        #[Autowire(service: 'parcours_audio.storage')] FilesystemOperator $storage,
+    ): StreamedResponse {
+        return $this->serve($storage, $prefix.'/'.$filename);
+    }
+
     #[Route('/data/{filename}', name: 'media_organization_data', methods: ['GET'], requirements: ['filename' => '[a-z0-9-]+\.json'])]
     public function organizationData(
         string $filename,

@@ -59,6 +59,10 @@ final class GenerateOrganizationDataHandler
                     // d'afficher le bandeau, elle n'a pas à connaître la règle
                     // commerciale ni à pouvoir la contourner.
                     'demoBanner' => $parcours->getDemoBanner(),
+                    // Chemins des versions audio, par langue. L'application
+                    // publique s'en sert en priorité et ne retombe sur la
+                    // synthèse du navigateur qu'en leur absence.
+                    'descriptionAudio' => $parcours->getDescriptionAudio(),
                     'distanceKm' => $parcours->getDistanceKm(),
                     'durationMinutes' => $parcours->getDurationMinutes(),
                     'transportModes' => $parcours->getTransportModes(),

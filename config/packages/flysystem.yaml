@@ -44,6 +44,11 @@ when@dev: &local_storages
                 options:
                     directory: '%kernel.project_dir%/var/storage/data'
 
+            parcours_audio.storage:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.project_dir%/var/storage/audio'
+
 when@test: *local_storages
 
 when@prod:
@@ -83,3 +88,10 @@ when@prod:
                     client: 'Aws\S3\S3Client'
                     bucket: '%env(AWS_S3_BUCKET)%'
                     prefix: 'data'
+
+            parcours_audio.storage:
+                <<: *s3
+                options:
+                    client: 'Aws\S3\S3Client'
+                    bucket: '%env(AWS_S3_BUCKET)%'
+                    prefix: 'audio'
