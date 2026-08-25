@@ -2,6 +2,13 @@ security:
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
+    # Sans hiérarchie, un compte portant uniquement ROLE_ADMIN n'aurait pas
+    # ROLE_USER, et échouerait sur le contrôle de niveau ressource d'API
+    # Platform (« is_granted('ROLE_USER') ») avant même d'atteindre les
+    # opérations d'administration.
+    role_hierarchy:
+        ROLE_ADMIN: [ROLE_USER]
+
     providers:
         app_user_provider:
             entity:

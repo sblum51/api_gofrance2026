@@ -55,6 +55,10 @@ final class GenerateOrganizationDataHandler
                     'description' => $parcours->getDescription(),
                     'accessibility' => $parcours->getAccessibility(),
                     'photoUrl' => $parcours->getPhotoUrl(),
+                    // Calculé côté serveur : l'application publique se contente
+                    // d'afficher le bandeau, elle n'a pas à connaître la règle
+                    // commerciale ni à pouvoir la contourner.
+                    'demoBanner' => $parcours->getDemoBanner(),
                     'distanceKm' => $parcours->getDistanceKm(),
                     'durationMinutes' => $parcours->getDurationMinutes(),
                     'transportModes' => $parcours->getTransportModes(),

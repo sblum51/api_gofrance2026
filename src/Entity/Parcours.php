@@ -32,6 +32,14 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
         new Post(processor: ParcoursWriteProcessor::class),
         new Patch(security: "is_granted('PARCOURS_EDIT', object)", processor: ParcoursWriteProcessor::class),
         new Delete(security: "is_granted('PARCOURS_EDIT', object)"),
+        // Achat à l'unité. Sans processor : celui du Patch courant reconstruit
+        // les points à partir du corps soumis et les effacerait tous ici.
+        new Patch(
+            uriTemplate: '/parcours/{id}/licence',
+            security: "is_granted('ROLE_ADMIN')",
+            denormalizationContext: ['groups' => ['parcours:admin']],
+            normalizationContext: ['groups' => ['parcours:admin:read']],
+        ),
     ],
     security: 'is_granted(\'ROLE_USER\')',
     normalizationContext: ['groups' => ['parcours:read']],
@@ -47,18 +55,18 @@ class Parcours
 
     #[ORM\Id]
     #[ORM\Column(type: Types::GUID)]
-    #[Groups(['parcours:read'])]
+    #[Groups(['parcours:read', 'parcours:admin:read'])]
     private string $id;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]
-    #[Groups(['parcours:read', 'parcours:write'])]
+    #[Groups(['parcours:read', 'parcours:write', 'parcours:admin:read'])]
     private string $name;
 
     /** Généré à partir du nom par ParcoursWriteProcessor, unique au sein de l'organisation. */
     #[ORM\Column(length: 255)]
-    #[Groups(['parcours:read'])]
+    #[Groups(['parcours:read', 'parcours:admin:read'])]
     private string $slug = '';
 
     /** @var array<string, string> description / remarques, multilingue, facultative */
@@ -132,6 +140,15 @@ class Parcours
     #[ORM\ManyToOne(inversedBy: 'parcours')]
     #[ORM\JoinColumn(nullable: false)]
     private Organization $organization;
+
+    /**
+     * Parcours acheté à l'unité : il est publié sans bandeau de démonstration
+     * même si l'organisation n'a pas d'abonnement illimité. État commercial,
+     * donc réservé à l'administration.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    #[Groups(['parcours:read', 'parcours:admin:read', 'parcours:admin'])]
+    private bool $licensed = false;
 
     #[ORM\ManyToMany(targetEntity: Tag::class, inversedBy: 'parcours')]
     #[ORM\JoinTable(name: 'parcours_tag')]
@@ -518,4 +535,29 @@ class Parcours
 
         return $this;
     }
+    public function isLicensed(): bool
+    {
+        return $this->licensed;
+    }
+
+    public function setLicensed(bool $licensed): static
+    {
+        $this->licensed = $licensed;
+
+        return $this;
+    }
+
+    /**
+     * Le bandeau de démonstration s'affiche par défaut. Il ne disparaît que si
+     * l'organisation a un abonnement illimité, ou si ce parcours précis a été
+     * acheté à l'unité. La règle est calculée ici plutôt que dans les
+     * applications clientes : elle est commerciale, elle n'a pas à être
+     * dupliquée ni contournable côté navigateur.
+     */
+    #[Groups(['parcours:read', 'parcours:admin:read'])]
+    public function getDemoBanner(): bool
+    {
+        return !$this->organization->isUnlimitedPlan() && !$this->licensed;
+    }
 }
+

@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Repository\OrganizationRepository;
@@ -28,6 +29,22 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
         new Get(requirements: ['id' => '[0-9a-fA-F-]{36}'], security: "is_granted('ORGANIZATION_VIEW', object)"),
         new Patch(requirements: ['id' => '[0-9a-fA-F-]{36}'], security: "is_granted('ORGANIZATION_EDIT', object)"),
         new Post(processor: OrganizationCreateProcessor::class),
+        // Administration : liste des organisations avec leurs parcours, et
+        // bascule de l'abonnement. Séparées des opérations courantes pour que
+        // le groupe d'écriture « admin » reste hors de portée du Patch normal —
+        // une organisation ne doit pas pouvoir s'attribuer son abonnement.
+        new GetCollection(
+            uriTemplate: '/organizations',
+            security: "is_granted('ROLE_ADMIN')",
+            normalizationContext: ['groups' => ['organization:admin:read', 'parcours:admin:read']],
+        ),
+        new Patch(
+            uriTemplate: '/organizations/{id}/plan',
+            requirements: ['id' => '[0-9a-fA-F-]{36}'],
+            security: "is_granted('ROLE_ADMIN')",
+            denormalizationContext: ['groups' => ['organization:admin']],
+            normalizationContext: ['groups' => ['organization:admin:read']],
+        ),
     ],
     security: 'is_granted(\'ROLE_USER\')',
     normalizationContext: ['groups' => ['organization:read']],
@@ -39,13 +56,13 @@ class Organization
 
     #[ORM\Id]
     #[ORM\Column(type: Types::GUID)]
-    #[Groups(['organization:read'])]
+    #[Groups(['organization:read', 'organization:admin:read'])]
     private string $id;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]
-    #[Groups(['organization:read', 'organization:write'])]
+    #[Groups(['organization:read', 'organization:write', 'organization:admin:read'])]
     private string $name;
 
     #[ORM\Column(length: 63)]
@@ -53,7 +70,7 @@ class Organization
     #[Assert\Length(min: 5, max: 63)]
     #[Assert\Regex(pattern: '/^[a-z0-9]+(-[a-z0-9]+)*$/', message: 'Uniquement des lettres minuscules, des chiffres et des tirets.')]
     #[Assert\Choice(choices: self::RESERVED_IDENTIFIERS, match: false, message: 'Cet identifiant est réservé.')]
-    #[Groups(['organization:read', 'organization:write'])]
+    #[Groups(['organization:read', 'organization:write', 'organization:admin:read'])]
     private string $identifier;
 
     #[Vich\UploadableField(mapping: 'organization_logo', fileNameProperty: 'logoName', size: 'logoSize')]
@@ -91,7 +108,18 @@ class Organization
     private User $owner;
 
     #[ORM\OneToMany(mappedBy: 'organization', targetEntity: Parcours::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['organization:admin:read'])]
     private Collection $parcours;
+
+    /**
+     * Abonnement illimité : aucun parcours de l'organisation ne porte le
+     * bandeau de démonstration. C'est un état commercial, il n'est donc
+     * modifiable que par l'administration — le groupe organization:admin n'est
+     * accessible qu'aux opérations réservées à ROLE_ADMIN.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    #[Groups(['organization:read', 'organization:admin:read', 'organization:admin'])]
+    private bool $unlimitedPlan = false;
 
     #[ORM\Column]
     #[Groups(['organization:read'])]
@@ -325,4 +353,16 @@ class Organization
 
         return $this;
     }
+    public function isUnlimitedPlan(): bool
+    {
+        return $this->unlimitedPlan;
+    }
+
+    public function setUnlimitedPlan(bool $unlimitedPlan): static
+    {
+        $this->unlimitedPlan = $unlimitedPlan;
+
+        return $this;
+    }
 }
+
