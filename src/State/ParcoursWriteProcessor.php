@@ -111,7 +111,7 @@ final class ParcoursWriteProcessor implements ProcessorInterface
     /** @param array<string, mixed> $pointData */
     private function buildPoint(array $pointData, string $kind, ?int $position): ParcoursPoint
     {
-        return (new ParcoursPoint())
+        $point = (new ParcoursPoint())
             ->setKind($kind)
             ->setLatitude((float) ($pointData['latitude'] ?? 0))
             ->setLongitude((float) ($pointData['longitude'] ?? 0))
@@ -123,6 +123,19 @@ final class ParcoursWriteProcessor implements ProcessorInterface
             ->setLinks(is_array($pointData['links'] ?? null) ? $pointData['links'] : [])
             ->setVideoUrl(is_string($pointData['videoUrl'] ?? null) ? trim($pointData['videoUrl']) : null)
             ->setPosition($position);
+
+        // Un lien que getVideo() ne sait pas analyser ne produirait aucune
+        // integration : l'editeur croirait sa video en place alors que rien ne
+        // s'afficherait jamais. On refuse plutot que d'accepter en silence.
+        // Le controle passe par l'analyseur lui-meme, pour que ce qui est
+        // accepte ici et ce qui est affichable ne puissent pas diverger.
+        if (null !== $point->getVideoUrl() && null === $point->getVideo()) {
+            throw new BadRequestHttpException(
+                'Lien video non reconnu : seuls YouTube (youtube.com, youtu.be) et Dailymotion (dailymotion.com, dai.ly) sont acceptes.'
+            );
+        }
+
+        return $point;
     }
 
     /**

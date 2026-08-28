@@ -535,6 +535,11 @@ class Parcours
             // Fournisseur et identifiant deja extraits : l'application publique
             // n'a pas a analyser une URL, et un lien mal forme ne s'y retrouve pas.
             'video' => $point->getVideo(),
+            // Le lien d'origine, que seul l'editeur relit : 'video' ne suffit pas
+            // a le reconstituer sans le deformer (un lien youtu.be ou /shorts
+            // reviendrait sous une autre forme). Sans cette cle, le champ se
+            // rouvrait vide et l'enregistrement suivant effacait la video.
+            'videoUrl' => $point->getVideoUrl(),
         ];
     }
 
