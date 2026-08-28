@@ -532,6 +532,9 @@ class Parcours
             // été demandée : l'application publique se rabat alors sur la
             // synthèse du navigateur.
             'audio' => $point->getAudio(),
+            // Fournisseur et identifiant deja extraits : l'application publique
+            // n'a pas a analyser une URL, et un lien mal forme ne s'y retrouve pas.
+            'video' => $point->getVideo(),
         ];
     }
 

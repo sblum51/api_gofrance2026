@@ -81,6 +81,21 @@ class ParcoursPoint
     #[Groups(['parcours:read'])]
     private array $audio = [];
 
+    /**
+     * Lien YouTube ou Dailymotion. La vidéo n'est pas hébergée chez nous : une
+     * vidéo de deux minutes pèse une cinquantaine de mégaoctets, ce qui la rend
+     * impossible à précharger pour le hors-ligne et coûterait, en diffusion,
+     * plus que l'abonnement annuel d'une organisation.
+     */
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Url(message: "Ce lien n'est pas une adresse valide.")]
+    #[Assert\Regex(
+        pattern: '#^https?://(www\\.)?(youtube\\.com/|youtu\\.be/|dailymotion\\.com/|dai\\.ly/)#i',
+        message: 'Seuls les liens YouTube et Dailymotion sont acceptés.',
+    )]
+    #[Groups(['parcours:read'])]
+    private ?string $videoUrl = null;
+
     #[ORM\Column(nullable: true)]
     #[Groups(['parcours:read'])]
     private ?string $imageUrl = null;
@@ -267,5 +282,55 @@ class ParcoursPoint
 
         return $this;
     }
+    public function getVideoUrl(): ?string
+    {
+        return $this->videoUrl;
+    }
+
+    public function setVideoUrl(?string $videoUrl): static
+    {
+        $this->videoUrl = $videoUrl ?: null;
+
+        return $this;
+    }
+
+    /**
+     * Fournisseur et identifiant extraits du lien, pour que l'application
+     * publique construise l'intégration sans avoir à analyser l'URL — et
+     * surtout sans qu'un lien mal formé s'y retrouve tel quel.
+     *
+     * @return array{provider: string, id: string}|null
+     */
+    #[Groups(['parcours:read'])]
+    public function getVideo(): ?array
+    {
+        if (null === $this->videoUrl) {
+            return null;
+        }
+
+        $motifs = [
+            'youtube' => [
+                '#youtube\\.com/watch\\?(?:.*&)?v=([\\w-]{6,})#i',
+                '#youtu\\.be/([\\w-]{6,})#i',
+                '#youtube\\.com/embed/([\\w-]{6,})#i',
+                '#youtube\\.com/shorts/([\\w-]{6,})#i',
+            ],
+            'dailymotion' => [
+                '#dailymotion\\.com/video/([\\w]+)#i',
+                '#dai\\.ly/([\\w]+)#i',
+            ],
+        ];
+
+        foreach ($motifs as $fournisseur => $regles) {
+            foreach ($regles as $regle) {
+                if (preg_match($regle, $this->videoUrl, $trouve)) {
+                    return ['provider' => $fournisseur, 'id' => $trouve[1]];
+                }
+            }
+        }
+
+        return null;
+    }
 }
+
 

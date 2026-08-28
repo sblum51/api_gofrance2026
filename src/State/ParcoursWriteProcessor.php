@@ -121,6 +121,7 @@ final class ParcoursWriteProcessor implements ProcessorInterface
             ->setImageUrl($pointData['imageUrl'] ?? null)
             ->setMedia(is_array($pointData['media'] ?? null) ? $pointData['media'] : [])
             ->setLinks(is_array($pointData['links'] ?? null) ? $pointData['links'] : [])
+            ->setVideoUrl(is_string($pointData['videoUrl'] ?? null) ? trim($pointData['videoUrl']) : null)
             ->setPosition($position);
     }
 
